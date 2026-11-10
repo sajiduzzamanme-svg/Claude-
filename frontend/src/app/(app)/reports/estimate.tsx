@@ -63,8 +63,8 @@ export function EstimateReport() {
             <motion.div variants={rise} className="flex items-start gap-3 rounded-2xl border border-rose/30 bg-rose-wash/60 px-4 py-3 text-sm">
               <TriangleAlert className="mt-0.5 size-5 shrink-0 text-rose" />
               <span>
-                {over.length > 0 && <>{t(`${over.length} cost heads are over their estimate: `, `${n(over.length)}টি খাত এস্টিমেট ছাড়িয়েছে: `)}<b>{over.map((r) => t(r.name, r.name_bn || r.name)).join(", ")}</b>. </>}
-                {unplanned.length > 0 && <>{t(`${unplanned.length} were not in the estimate at all: `, `${n(unplanned.length)}টি এস্টিমেটে ছিলই না: `)}<b>{unplanned.map((r) => t(r.name, r.name_bn || r.name)).join(", ")}</b>.</>}
+                {over.length > 0 && <>{t("Over the estimate: ", "এস্টিমেট ছাড়িয়েছে: ")}<b>{over.map((r) => t(r.name, r.name_bn || r.name)).join(", ")}</b>. </>}
+                {unplanned.length > 0 && <>{t("Spent with no estimate line: ", "এস্টিমেটে ছিল না, তবু খরচ হয়েছে: ")}<b>{unplanned.map((r) => t(r.name, r.name_bn || r.name)).join(", ")}</b>.</>}
               </span>
             </motion.div>
           )}

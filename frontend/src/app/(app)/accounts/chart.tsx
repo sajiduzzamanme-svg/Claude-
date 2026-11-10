@@ -48,7 +48,7 @@ export function ChartOfAccounts({ onOpenLedger }: { onOpenLedger: (id: number) =
                         {a.is_cash_bank && <Landmark className="size-3.5 shrink-0 text-sky" aria-label={t("Cash or bank account", "নগদ/ব্যাংক হিসাব")} />}
                         {a.is_control && <span title={t("Maintained by the system from source documents", "সিস্টেম নিজে মূল দলিল থেকে রাখে")}><Lock className="size-3.5 shrink-0 text-brass" /></span>}
                         <span className={cn("tnum w-28 shrink-0 text-right font-semibold", num(a.balance) === 0 && "font-normal text-mute", num(a.balance) < 0 && "text-rose")}>{taka(a.balance)}</span>
-                        <span className="flex w-14 shrink-0 justify-end gap-0.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+                        <span className="flex w-14 shrink-0 justify-end gap-0.5 opacity-40 transition group-hover:opacity-100 focus-within:opacity-100">
                           <button onClick={() => onOpenLedger(a.id)} aria-label={t("Open ledger", "লেজার দেখুন")} className="grid size-7 place-items-center rounded-md text-mute hover:bg-paper-deep hover:text-ink"><BookOpenText className="size-3.5" /></button>
                           <button onClick={() => setEditing(a)} aria-label={t("Rename", "নাম বদলান")} className="grid size-7 place-items-center rounded-md text-mute hover:bg-paper-deep hover:text-ink"><Pencil className="size-3.5" /></button>
                         </span>
