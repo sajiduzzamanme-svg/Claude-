@@ -12,5 +12,7 @@ out/
 next-env.d.ts
 # Env & OS
 .env
+!.env.example
+!frontend/.env.development
 .env.local
 .DS_Store
