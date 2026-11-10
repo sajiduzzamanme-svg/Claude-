@@ -2,9 +2,9 @@
 
 import { Calculator, Crown, HardHat, Megaphone, Pencil, ShieldCheck, ShoppingCart, UserPlus } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { LABELS, StatusBadge } from "@/components/forms";
-import { useWhen } from "@/components/finance-parts";
+import { useOnOpen, useWhen } from "@/components/finance-parts";
 import { Avatar, Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Skeleton, cn, rise, stagger, useAction } from "@/components/ui";
 import { api, refreshAll, useList } from "@/lib/api";
 import { ROLES, useAuth, type Role, type User } from "@/lib/auth";
@@ -66,7 +66,7 @@ export function Users() {
                   <div className="truncate text-xs text-mute"><span className="tnum">@{u.username}</span>{u.designation ? ` · ${u.designation}` : ""}{u.phone ? ` · ${u.phone}` : ""}</div>
                 </div>
                 <StatusBadge group="role" value={u.role} dot={false} />
-                <span className="w-32 text-right text-xs text-mute">{u.last_login ? <>{t("Last seen", "সর্বশেষ")} {when(u.last_login)}</> : t("Never signed in", "কখনো সাইন-ইন করেননি")}</span>
+                {u.last_login && <span className="w-32 text-right text-xs text-mute">{t("Last seen", "সর্বশেষ")} {when(u.last_login)}</span>}
                 {canEdit && <button onClick={() => setEditing(u)} aria-label={t("Edit user", "ইউজার সম্পাদনা")} className="grid size-8 place-items-center rounded-lg text-mute transition hover:bg-paper-deep hover:text-ink"><Pencil className="size-4" /></button>}
               </motion.li>
             ))}
@@ -83,12 +83,11 @@ function UserModal({ target, onClose, selfId }: { target: Row | "new" | null; on
   const { busy, error, run, setError } = useAction();
   const editing = target && target !== "new" ? target : null;
   const [f, setF] = useState({ username: "", first_name: "", last_name: "", email: "", phone: "", designation: "", role: "SALES" as Role, password: "", is_active: true });
-  useEffect(() => {
-    if (!target) return;
+  useOnOpen(target, (u) => {
     setError("");
-    setF(editing ? { username: editing.username, first_name: editing.first_name, last_name: editing.last_name, email: editing.email, phone: editing.phone, designation: editing.designation, role: editing.role, password: "", is_active: editing.is_active }
+    setF(u !== "new" ? { username: u.username, first_name: u.first_name, last_name: u.last_name, email: u.email, phone: u.phone, designation: u.designation, role: u.role, password: "", is_active: u.is_active }
       : { username: "", first_name: "", last_name: "", email: "", phone: "", designation: "", role: "SALES", password: "", is_active: true });
-  }, [target, editing, setError]);
+  });
 
   const self = editing?.id === selfId;
   const valid = f.username.trim() && f.first_name.trim() && (editing ? f.password === "" || f.password.length >= 6 : f.password.length >= 6);

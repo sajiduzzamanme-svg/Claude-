@@ -65,6 +65,10 @@ html {
 html[lang="bn"] body {
   line-height: 1.65;
 }
+/* Letter-spacing splits Bengali conjuncts apart, so never space Bengali text. */
+html[lang="bn"] * {
+  letter-spacing: 0 !important;
+}
 body {
   font-family: var(--font-sans);
   min-height: 100dvh;

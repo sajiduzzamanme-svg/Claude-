@@ -90,6 +90,8 @@ async function request<T>(method: string, path: string, body?: unknown, retry = 
   if (res.status === 401 && retry && path !== "/auth/login") {
     if (await refreshAccess()) return request<T>(method, path, body, false);
     tokens.clear();
+    // A full page load on purpose: the session is gone, so no cached state may survive.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     if (!window.location.pathname.startsWith("/login")) window.location.assign("/login");
     throw new ApiError(401, { detail: "Your session has ended. Please sign in again." });
   }

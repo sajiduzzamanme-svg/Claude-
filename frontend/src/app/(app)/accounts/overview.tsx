@@ -47,8 +47,8 @@ export function Overview() {
       </motion.section>
 
       <div className="grid gap-5 xl:grid-cols-2">
-        <motion.div variants={rise}><Equation tb={tb} /></motion.div>
-        <motion.div variants={rise}><BooksAudit /></motion.div>
+        <motion.div variants={rise} className="min-w-0"><Equation tb={tb} /></motion.div>
+        <motion.div variants={rise} className="min-w-0"><BooksAudit /></motion.div>
       </div>
     </motion.div>
   );
@@ -119,12 +119,12 @@ function BooksAudit() {
 
   return (
     <Card className="h-full overflow-hidden">
-      <div className={cn("flex items-center gap-4 border-b border-line p-5 sm:p-6", data && (data.ok ? "bg-leaf-wash/60" : "bg-rose-wash/70"))}>
+      <div className={cn("flex flex-wrap items-center gap-4 border-b border-line p-5 sm:p-6", data && (data.ok ? "bg-leaf-wash/60" : "bg-rose-wash/70"))}>
         <motion.span key={`${run}-${data?.ok}`} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 16, delay: total * step }}
           className={cn("grid size-14 shrink-0 place-items-center rounded-2xl", !data ? "bg-paper-deep text-mute" : data.ok ? "bg-leaf text-white" : "bg-rose text-white")}>
           {data && !data.ok ? <ShieldAlert className="size-7" /> : <ShieldCheck className="size-7" />}
         </motion.span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-48">
           <h2 className="text-[15px] font-semibold">{t("Books audit", "হিসাব যাচাই")}</h2>
           <p className="text-[13px] text-ink-soft">
             {!data ? t("Checking…", "যাচাই চলছে…") : data.ok

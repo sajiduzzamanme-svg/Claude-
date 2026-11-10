@@ -66,17 +66,18 @@ export function fmonth(d: string | Date | null | undefined, lang: Lang = "en", w
   return withYear ? digits(`${month} ${String(p[0]).slice(2)}`, lang) : month;
 }
 
+const DHAKA_DATE = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" });
+/** Today's date in Bangladesh (the books run on Dhaka time, wherever the browser is). */
 export function today(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return DHAKA_DATE.format(new Date());
 }
 
 export function daysFromToday(d: string | null | undefined): number | null {
   const p = parts(d);
   if (!p) return null;
-  const t = new Date();
+  const t = parts(today())!;
   const a = Date.UTC(p[0], p[1], p[2]);
-  const b = Date.UTC(t.getFullYear(), t.getMonth(), t.getDate());
+  const b = Date.UTC(t[0], t[1], t[2]);
   return Math.round((a - b) / 86400000);
 }
 

@@ -43,15 +43,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!tokens.access) {
+    let alive = true;
+    const who = tokens.access
+      ? api.get<User>("/auth/me").catch(() => {
+          tokens.clear();
+          return null;
+        })
+      : Promise.resolve(null);
+    void who.then((u) => {
+      if (!alive) return;
+      setUser(u);
       setLoading(false);
-      return;
-    }
-    api
-      .get<User>("/auth/me")
-      .then(setUser)
-      .catch(() => tokens.clear())
-      .finally(() => setLoading(false));
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const login = useCallback(async (username: string, password: string) => {
@@ -65,6 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokens.clear();
     setUser(null);
     void mutate(() => true, undefined, { revalidate: false });
+    // A full page load on purpose: it drops every piece of the previous user's in-memory state.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.assign("/login");
   }, []);
 

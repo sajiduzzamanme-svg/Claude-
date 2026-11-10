@@ -3,7 +3,7 @@
 import { Check, Plus, RotateCcw, ScrollText, Search, Trash2, TriangleAlert } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
-import { Chevron, Collapse } from "@/components/finance-parts";
+import { Chevron, Collapse, useOnOpen } from "@/components/finance-parts";
 import { LABELS, ProjectSelect } from "@/components/forms";
 import { Badge, Button, Card, Empty, ErrorNote, Field, Input, Modal, Select, Skeleton, Textarea, cn, ease, useAction, type Tone } from "@/components/ui";
 import { api, qs, refreshAll, useList } from "@/lib/api";
@@ -134,7 +134,7 @@ function ReverseModal({ entry, onClose }: { entry: JournalEntry | null; onClose:
   const { t } = useT();
   const { busy, error, run, setError } = useAction();
   const [reason, setReason] = useState("");
-  useEffect(() => { if (entry) { setReason(""); setError(""); } }, [entry, setError]);
+  useOnOpen(entry, () => { setReason(""); setError(""); });
   return (
     <Modal open={!!entry} onClose={onClose} size="sm" title={t(`Reverse ${entry?.number ?? ""}`, `${entry?.number ?? ""} রিভার্স`)}
       subtitle={t("A mirror-image voucher is posted today. The original stays in the books.", "আজকের তারিখে একটি বিপরীত ভাউচার পোস্ট হবে। মূল ভাউচার হিসাবে থেকে যাবে।")}
@@ -168,7 +168,7 @@ function VoucherModal({ open, onClose }: { open: boolean; onClose: () => void })
   const { rows: accounts } = useList<Account>("/accounts");
   const [head, setHead] = useState({ date: today(), memo: "", project: "" });
   const [rows, setRows] = useState<Row[]>([blankRow(), blankRow()]);
-  useEffect(() => { if (open) { setHead({ date: today(), memo: "", project: "" }); setRows([blankRow(), blankRow()]); setError(""); } }, [open, setError]);
+  useOnOpen(open, () => { setHead({ date: today(), memo: "", project: "" }); setRows([blankRow(), blankRow()]); setError(""); });
 
   const groups = useMemo(() => (["ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"] as const).map((type) => ({ type, items: accounts.filter((a) => a.type === type && a.is_active) })), [accounts]);
   const set = (i: number, patch: Partial<Row>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));

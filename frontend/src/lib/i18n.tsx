@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import * as f from "./format";
 import type { Lang } from "./format";
 
@@ -20,20 +20,29 @@ type Ctx = {
 const LangContext = createContext<Ctx | null>(null);
 const KEY = "spaceup.lang";
 
-export function LangProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
+// The chosen language is kept in localStorage and read as an external store,
+// so the server render (English) and the first client render agree.
+const listeners = new Set<() => void>();
+function subscribe(cb: () => void) {
+  listeners.add(cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    listeners.delete(cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+const readLang = (): Lang => (window.localStorage.getItem(KEY) === "bn" ? "bn" : "en");
 
-  useEffect(() => {
-    const saved = window.localStorage.getItem(KEY);
-    if (saved === "bn" || saved === "en") setLangState(saved);
-  }, []);
+export function LangProvider({ children }: { children: ReactNode }) {
+  const lang = useSyncExternalStore<Lang>(subscribe, readLang, () => "en");
+
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
 
   const setLang = useCallback((l: Lang) => {
-    setLangState(l);
     window.localStorage.setItem(KEY, l);
+    listeners.forEach((cb) => cb());
   }, []);
 
   const value = useMemo<Ctx>(

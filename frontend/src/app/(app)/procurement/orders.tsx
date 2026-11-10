@@ -2,8 +2,8 @@
 
 import { ArrowRight, Ban, Check, ClipboardList, PackageCheck, Plus, Truck } from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { useEffect, useState } from "react";
-import { Collapse, Chevron } from "@/components/finance-parts";
+import { useState } from "react";
+import { Chevron, Collapse, useOnOpen } from "@/components/finance-parts";
 import { LineItems, ProjectSelect, emptyLine, lineTotal, linesPayload, type LineDraft } from "@/components/forms";
 import { Badge, Button, Card, Empty, ErrorNote, Field, Input, Modal, Select, Skeleton, cn, ease, useAction, useToast } from "@/components/ui";
 import { api, errorText, refreshAll, useList } from "@/lib/api";
@@ -44,7 +44,7 @@ export function Orders({ orders, loading }: { orders: PurchaseOrder[]; loading: 
               const items = orders.filter((o) => o.status === s.id);
               const Icon = s.icon;
               return (
-                <section key={s.id} className="relative rounded-3xl border border-line bg-paper-deep/40 p-3">
+                <section key={s.id} className="relative min-w-0 rounded-3xl border border-line bg-paper-deep/40 p-3">
                   {si < 2 && <ArrowRight className="absolute -right-[18px] top-7 z-10 hidden size-5 rounded-full border border-line bg-card p-0.5 text-mute lg:block" />}
                   <header className="mb-3 flex items-center gap-3 px-1">
                     <span className={cn("grid size-9 place-items-center rounded-xl", s.tone)}><Icon className="size-[18px]" /></span>
@@ -110,7 +110,7 @@ function OrderCard({ o, onReceive }: { o: PurchaseOrder; onReceive: () => void }
   }
 
   return (
-    <motion.div layout layoutId={`po-${o.id}`} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.35, ease }}>
+    <motion.div className="min-w-0" layout layoutId={`po-${o.id}`} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.35, ease }}>
       <Card hover className="p-4">
         <button type="button" onClick={() => setOpen((s) => !s)} className="flex w-full items-start justify-between gap-3 text-left">
           <div className="min-w-0">
@@ -157,9 +157,11 @@ function OrderModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
   const { rows: packages } = useList<WorkPackage>(open && f.project ? `/work-packages?project=${f.project}` : null);
 
-  useEffect(() => {
-    if (open) { setF({ project: "", vendor: "", work_package: "", date: today(), expected_date: "", notes: "" }); setLines([emptyLine()]); setError(""); }
-  }, [open, setError]);
+  useOnOpen(open, () => {
+    setF({ project: "", vendor: "", work_package: "", date: today(), expected_date: "", notes: "" });
+    setLines([emptyLine()]);
+    setError("");
+  });
 
   // A purchase order is always quantity × rate, so every line needs both.
   const complete = lines.filter((l) => l.cost_head && l.description.trim() && num(l.quantity) > 0 && num(l.rate) > 0);
@@ -214,7 +216,7 @@ function ReceiveGoodsModal({ order, onClose }: { order: PurchaseOrder | null; on
   const { t, taka } = useT();
   const { busy, error, run, setError } = useAction();
   const [f, setF] = useState({ date: today(), reference: "", due_date: "" });
-  useEffect(() => { if (order) { setF({ date: today(), reference: "", due_date: "" }); setError(""); } }, [order, setError]);
+  useOnOpen(order, () => { setF({ date: today(), reference: "", due_date: "" }); setError(""); });
 
   async function save() {
     if (!order) return;

@@ -2,7 +2,8 @@
 
 import { BookOpenText, Landmark, Lock, Pencil, Plus } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useOnOpen } from "@/components/finance-parts";
 import { LABELS } from "@/components/forms";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Skeleton, cn, rise, stagger, useAction } from "@/components/ui";
 import { api, refreshAll, useList } from "@/lib/api";
@@ -33,7 +34,7 @@ export function ChartOfAccounts({ onOpenLedger }: { onOpenLedger: (id: number) =
             const total = items.reduce((a, x) => a + num(x.balance), 0);
             const def = LABELS.account[type];
             return (
-              <motion.div key={type} variants={rise} className={cn(type === "EXPENSE" && "lg:col-span-2")}>
+              <motion.div key={type} variants={rise} className={cn("min-w-0", type === "EXPENSE" && "lg:col-span-2")}>
                 <Card className="overflow-hidden">
                   <header className="flex items-center gap-3 border-b border-line px-5 py-3.5">
                     <span className={cn("h-9 w-1.5 rounded-full", BAND[type])} />
@@ -47,9 +48,9 @@ export function ChartOfAccounts({ onOpenLedger }: { onOpenLedger: (id: number) =
                         <button onClick={() => onOpenLedger(a.id)} className="min-w-0 flex-1 truncate text-left font-medium hover:text-brick hover:underline" title={t("Open ledger", "লেজার দেখুন")}>{t(a.name, a.name_bn || a.name)}</button>
                         {a.is_cash_bank && <Landmark className="size-3.5 shrink-0 text-sky" aria-label={t("Cash or bank account", "নগদ/ব্যাংক হিসাব")} />}
                         {a.is_control && <span title={t("Maintained by the system from source documents", "সিস্টেম নিজে মূল দলিল থেকে রাখে")}><Lock className="size-3.5 shrink-0 text-brass" /></span>}
-                        <span className={cn("tnum w-28 shrink-0 text-right font-semibold", num(a.balance) === 0 && "font-normal text-mute", num(a.balance) < 0 && "text-rose")}>{taka(a.balance)}</span>
-                        <span className="flex w-14 shrink-0 justify-end gap-0.5 opacity-40 transition group-hover:opacity-100 focus-within:opacity-100">
-                          <button onClick={() => onOpenLedger(a.id)} aria-label={t("Open ledger", "লেজার দেখুন")} className="grid size-7 place-items-center rounded-md text-mute hover:bg-paper-deep hover:text-ink"><BookOpenText className="size-3.5" /></button>
+                        <span className={cn("tnum w-24 shrink-0 text-right font-semibold sm:w-28", num(a.balance) === 0 && "font-normal text-mute", num(a.balance) < 0 && "text-rose")}>{taka(a.balance)}</span>
+                        <span className="flex shrink-0 justify-end gap-0.5 opacity-40 transition group-hover:opacity-100 focus-within:opacity-100 sm:w-14">
+                          <button onClick={() => onOpenLedger(a.id)} aria-label={t("Open ledger", "লেজার দেখুন")} className="hidden size-7 place-items-center rounded-md text-mute hover:bg-paper-deep hover:text-ink sm:grid"><BookOpenText className="size-3.5" /></button>
                           <button onClick={() => setEditing(a)} aria-label={t("Rename", "নাম বদলান")} className="grid size-7 place-items-center rounded-md text-mute hover:bg-paper-deep hover:text-ink"><Pencil className="size-3.5" /></button>
                         </span>
                       </li>
@@ -72,12 +73,11 @@ function AccountModal({ target, onClose }: { target: Account | "new" | null; onC
   const editing = target && target !== "new" ? target : null;
   const system = !!editing?.system_key;
   const [f, setF] = useState({ code: "", name: "", name_bn: "", type: "EXPENSE", is_cash_bank: false, is_active: true });
-  useEffect(() => {
-    if (!target) return;
+  useOnOpen(target, (a) => {
     setError("");
-    setF(editing ? { code: editing.code, name: editing.name, name_bn: editing.name_bn, type: editing.type, is_cash_bank: editing.is_cash_bank, is_active: editing.is_active }
+    setF(a !== "new" ? { code: a.code, name: a.name, name_bn: a.name_bn, type: a.type, is_cash_bank: a.is_cash_bank, is_active: a.is_active }
       : { code: "", name: "", name_bn: "", type: "EXPENSE", is_cash_bank: false, is_active: true });
-  }, [target, editing, setError]);
+  });
 
   async function save() {
     const ok = await run(async () => {

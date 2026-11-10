@@ -2,11 +2,11 @@
 
 import { CalendarDays, Handshake, HardHat, Pencil, Plus, ShieldHalf, TriangleAlert, Wrench } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
-import { LayerBar, ProjectChips } from "@/components/finance-parts";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { LayerBar, ProjectChips, useOnOpen } from "@/components/finance-parts";
 import { CostHeadSelect, ProjectSelect, StatusBadge } from "@/components/forms";
 import { Guard, Page } from "@/components/shell";
-import { Badge, Button, Card, Empty, ErrorNote, Field, Input, Modal, MoneyInput, Ring, Select, Skeleton, Textarea, cn, ease, rise, stagger, useAction, useToast } from "@/components/ui";
+import { Button, Card, Empty, ErrorNote, Field, Input, Modal, MoneyInput, Ring, Select, Skeleton, Textarea, cn, ease, rise, stagger, useAction, useToast } from "@/components/ui";
 import { api, errorText, refreshAll, useList } from "@/lib/api";
 import { ROLES, useAuth, type Role } from "@/lib/auth";
 import { num } from "@/lib/format";
@@ -54,9 +54,9 @@ function Construction() {
             {milestones.length === 0 ? (
               <p className="mt-3 text-sm text-paper/60">{t("No milestones yet. Add them from the project page.", "এখনো মাইলস্টোন নেই। প্রজেক্ট পেজ থেকে যোগ করুন।")}</p>
             ) : (
-              <div className="mt-3 flex gap-1.5">
+              <div className="scroll-thin mt-3 flex gap-1.5 overflow-x-auto pb-1">
                 {milestones.map((m, i) => (
-                  <div key={m.id} className="group min-w-0" style={{ flexGrow: Math.max(num(m.weight), 1), flexBasis: 0 }} title={`${m.name} · ${m.progress}%`}>
+                  <div key={m.id} className="group min-w-14" style={{ flexGrow: Math.max(num(m.weight), 1), flexBasis: 0 }} title={`${m.name} · ${m.progress}%`}>
                     <div className="h-3.5 overflow-hidden rounded-[5px] bg-white/10">
                       <motion.div className={cn("h-full rounded-[5px]", m.progress >= 100 ? "bg-leaf" : "bg-brass")} initial={{ width: 0 }} animate={{ width: `${m.progress}%` }} transition={{ duration: 0.8, ease, delay: 0.2 + i * 0.08 }} />
                     </div>
@@ -80,7 +80,7 @@ function Construction() {
       ) : packages.length === 0 ? (
         <Card className="mt-5"><Empty icon={<Wrench />} title={t("No work packages for this project yet", "এই প্রজেক্টে এখনো কোনো কাজের অংশ নেই")} hint={t("Split the build into packages such as piling, structure and finishing, and choose who does each.", "নির্মাণকে পাইলিং, স্ট্রাকচার, ফিনিশিং-এর মতো অংশে ভাগ করুন এবং কে করবে ঠিক করুন।")} action={canEdit && <Button icon={<Plus className="size-4" />} onClick={() => setEditing("new")}>{t("Add work package", "কাজের অংশ যোগ করুন")}</Button>} /></Card>
       ) : (
-        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <div className="mt-5 grid items-start gap-5 lg:grid-cols-2">
           <Lane icon={<HardHat className="size-5" />} tone="brass" title={t("Own team", "নিজস্ব টিম")} hint={t("We buy materials and pay labour ourselves", "মালামাল ও লেবার নিজেরাই")} items={own} canEdit={canEdit} onEdit={setEditing} />
           <Lane icon={<Handshake className="size-5" />} tone="brick" title={t("Contractor", "ঠিকাদার")} hint={t("Billed against a contract value, with retention", "চুক্তিমূল্যের বিপরীতে বিল, জামানতসহ")} items={contracted} canEdit={canEdit} onEdit={setEditing} />
         </div>
@@ -98,7 +98,7 @@ function Lane({ icon, tone, title, hint, items, canEdit, onEdit }: {
   const budget = items.reduce((a, w) => a + num(w.budget), 0);
   const billed = items.reduce((a, w) => a + num(w.billed), 0);
   return (
-    <motion.section variants={rise} className="rounded-3xl border border-line bg-paper-deep/40 p-3 sm:p-4">
+    <motion.section variants={rise} className="min-w-0 rounded-3xl border border-line bg-paper-deep/40 p-3 sm:p-4">
       <header className="mb-3 flex items-center gap-3 px-1">
         <span className={cn("grid size-10 place-items-center rounded-xl", tone === "brass" ? "bg-brass text-ink" : "bg-brick text-white")}>{icon}</span>
         <div className="min-w-0 flex-1">
@@ -126,20 +126,26 @@ function PackageCard({ w, canEdit, onEdit }: { w: WorkPackage; canEdit: boolean;
   const toast = useToast();
   const [value, setValue] = useState(w.progress);
   const [saving, setSaving] = useState(false);
-  useEffect(() => setValue(w.progress), [w.progress]);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Follow the server value, except while the user is still dragging or a save is in flight.
+  useEffect(() => {
+    if (!timer.current && !saving) setValue(w.progress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [w.progress]);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   const budget = num(w.budget), billed = num(w.billed), paid = num(w.paid);
   const ratio = budget > 0 ? billed / budget : 0;
   const contractor = w.execution === "CONTRACTOR";
-  const flag = ratio > 1 ? "over" : ratio >= 0.9 ? "near" : null;
+  // "Nearly used up" only matters while there is still work to bill.
+  const flag = ratio > 1 ? "over" : ratio >= 0.9 && w.status !== "DONE" ? "near" : null;
 
-  async function commit() {
-    if (value === w.progress || saving) return;
+  async function save(next: number) {
     setSaving(true);
     try {
-      await api.patch(`/work-packages/${w.id}`, { progress: value });
+      await api.patch(`/work-packages/${w.id}`, { progress: next });
       await refreshAll();
-      toast.ok(t(`${w.name}: progress saved at ${value}%`, `${w.name}: অগ্রগতি সেভ হয়েছে`));
+      toast.ok(t(`${w.name}: progress saved at ${next}%`, `${w.name}: অগ্রগতি সেভ হয়েছে`));
     } catch (e) {
       setValue(w.progress);
       toast.err(errorText(e));
@@ -147,9 +153,18 @@ function PackageCard({ w, canEdit, onEdit }: { w: WorkPackage; canEdit: boolean;
       setSaving(false);
     }
   }
+  /** Save once the slider has rested for a moment, so a drag or a run of key presses is one save. */
+  function change(next: number) {
+    setValue(next);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      if (next !== w.progress) void save(next);
+    }, 650);
+  }
 
   return (
-    <motion.div variants={rise} layout>
+    <motion.div variants={rise} layout className="min-w-0">
       <Card hover className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -192,7 +207,7 @@ function PackageCard({ w, canEdit, onEdit }: { w: WorkPackage; canEdit: boolean;
           </div>
           {canEdit ? (
             <input type="range" min={0} max={100} step={5} value={value} aria-label={t("Work done", "কাজের অগ্রগতি")}
-              onChange={(e) => setValue(Number(e.target.value))} onPointerUp={commit} onKeyUp={commit} onBlur={commit}
+              onChange={(e) => change(Number(e.target.value))}
               className="h-2 w-full cursor-pointer accent-brick" />
           ) : (
             <div className="h-2 overflow-hidden rounded-full bg-line"><motion.div className="h-full rounded-full bg-ink" initial={{ width: 0 }} animate={{ width: `${value}%` }} transition={{ duration: 0.8, ease }} /></div>
@@ -212,15 +227,14 @@ function PackageModal({ target, project, onClose }: { target: WorkPackage | "new
   const blank = useMemo(() => ({ project, name: "", cost_head: "", execution: "OWN", vendor: "", budget: "", retention_percent: "5", start_date: "", end_date: "", notes: "" }), [project]);
   const [f, setF] = useState(blank);
 
-  useEffect(() => {
-    if (!target) return;
+  useOnOpen(target, (w) => {
     setError("");
-    setF(editing ? {
-      project: String(editing.project), name: editing.name, cost_head: String(editing.cost_head), execution: editing.execution,
-      vendor: editing.vendor ? String(editing.vendor) : "", budget: String(num(editing.budget)), retention_percent: String(num(editing.retention_percent)),
-      start_date: editing.start_date ?? "", end_date: editing.end_date ?? "", notes: editing.notes,
+    setF(w !== "new" ? {
+      project: String(w.project), name: w.name, cost_head: String(w.cost_head), execution: w.execution,
+      vendor: w.vendor ? String(w.vendor) : "", budget: String(num(w.budget)), retention_percent: String(num(w.retention_percent)),
+      start_date: w.start_date ?? "", end_date: w.end_date ?? "", notes: w.notes,
     } : blank);
-  }, [target, editing, blank, setError]);
+  });
 
   const contractor = f.execution === "CONTRACTOR";
   const valid = f.project && f.name.trim() && f.cost_head && (!contractor || f.vendor);

@@ -4,7 +4,7 @@ import clsx, { type ClassValue } from "clsx";
 import { AnimatePresence, animate, motion, useInView, useMotionValue, useTransform, type Variants } from "motion/react";
 import { Check, Loader2, TriangleAlert, X } from "lucide-react";
 import {
-  createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState,
+  createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore,
   type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from "react";
@@ -241,8 +241,7 @@ export function useToast() {
 export function Modal({ open, onClose, title, subtitle, children, footer, size = "md" }: {
   open: boolean; onClose: () => void; title: ReactNode; subtitle?: ReactNode; children: ReactNode; footer?: ReactNode; size?: "sm" | "md" | "lg" | "xl";
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useIsClient();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -394,17 +393,26 @@ export function KeyValue({ label, children, className }: { label: ReactNode; chi
   );
 }
 
-/** Close any open state when the route is hidden by Next.js <Activity>. */
-export function useResetOnHide(reset: () => void) {
-  const ref = useRef(reset);
-  ref.current = reset;
-  const armed = useRef(false);
-  useLayoutEffect(() => {
-    armed.current = true;
-    return () => {
-      if (armed.current) ref.current();
-    };
-  }, []);
+const noopSubscribe = () => () => {};
+/** False while rendering on the server and during hydration, true afterwards. */
+export function useIsClient() {
+  return useSyncExternalStore(noopSubscribe, () => true, () => false);
+}
+
+/** Re-initialise local state in the very render in which `key` changes
+ *  (React's "adjust state while rendering" pattern: no effect, no extra paint). */
+export function useOnChange<K>(key: K, run: (key: K) => void) {
+  const [prev, setPrev] = useState(key);
+  if (!Object.is(prev, key)) {
+    setPrev(key);
+    run(key);
+  }
+}
+/** Reset a dialog's form each time it opens (or opens for a different record). */
+export function useOnOpen(open: boolean, reset: () => void, id: unknown = null) {
+  useOnChange(open ? id ?? true : false, (now) => {
+    if (now !== false) reset();
+  });
 }
 
 /** Run an API action with busy + error state; shows a toast on success. */

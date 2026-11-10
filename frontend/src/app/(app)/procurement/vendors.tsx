@@ -2,7 +2,8 @@
 
 import { MapPin, Pencil, Phone, Plus, Store } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useOnOpen } from "@/components/finance-parts";
 import { StatusBadge } from "@/components/forms";
 import { Avatar, Badge, Button, Card, Empty, ErrorNote, Field, Input, Modal, Select, Skeleton, Textarea, cn, rise, stagger, useAction } from "@/components/ui";
 import { api, refreshAll } from "@/lib/api";
@@ -87,12 +88,11 @@ function VendorModal({ target, onClose }: { target: Vendor | "new" | null; onClo
   const { busy, error, run, setError } = useAction();
   const editing = target && target !== "new" ? target : null;
   const [f, setF] = useState({ name: "", kind: "SUPPLIER", phone: "", address: "", trade_license: "", notes: "", is_active: true });
-  useEffect(() => {
-    if (!target) return;
+  useOnOpen(target, (v) => {
     setError("");
-    setF(editing ? { name: editing.name, kind: editing.kind, phone: editing.phone, address: editing.address, trade_license: editing.trade_license, notes: editing.notes, is_active: editing.is_active }
+    setF(v !== "new" ? { name: v.name, kind: v.kind, phone: v.phone, address: v.address, trade_license: v.trade_license, notes: v.notes, is_active: v.is_active }
       : { name: "", kind: "SUPPLIER", phone: "", address: "", trade_license: "", notes: "", is_active: true });
-  }, [target, editing, setError]);
+  });
 
   async function save() {
     const ok = await run(async () => {

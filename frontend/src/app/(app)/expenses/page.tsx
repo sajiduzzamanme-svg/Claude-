@@ -44,9 +44,9 @@ function Expenses() {
       subtitle={t("Money paid out directly — site petty cash, fees, wages, office costs. Vendor invoices belong under Procurement.", "সরাসরি পরিশোধ — সাইটের খুচরা খরচ, ফি, মজুরি, অফিস খরচ। সরবরাহকারীর বিল ক্রয় ও বিল অংশে।")}
     >
       <div className="grid gap-5 xl:grid-cols-[400px_1fr] xl:items-start">
-        <motion.div variants={rise} className="xl:sticky xl:top-6"><QuickEntry /></motion.div>
+        <motion.div variants={rise} className="min-w-0 xl:sticky xl:top-6"><QuickEntry /></motion.div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <motion.div variants={rise}>
             <Card className="p-5 sm:p-6">
               <SectionTitle hint={t("Posted expenses in the current view", "বর্তমান ফিল্টারে পোস্টেড খরচ")}>{t("Where the money went", "টাকা কোথায় গেল")}</SectionTitle>

@@ -2,8 +2,8 @@
 
 import { Banknote, CircleAlert, Plus, ReceiptText, ShieldHalf, Undo2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
-import { Chevron, Collapse } from "@/components/finance-parts";
+import { useState } from "react";
+import { Chevron, Collapse, useOnOpen } from "@/components/finance-parts";
 import { CashSelect, LineItems, ProjectSelect, StatusBadge, VoidModal, emptyLine, lineTotal, linesPayload, useLabel, type LineDraft } from "@/components/forms";
 import { Badge, Button, Card, Empty, ErrorNote, Field, Input, Modal, MoneyInput, Select, Skeleton, cn, ease, useAction } from "@/components/ui";
 import { api, qs, refreshAll, useList } from "@/lib/api";
@@ -112,12 +112,13 @@ function BillRow({ b, index, onPay, onVoid, onVoidPayment }: { b: VendorBill; in
             <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-mute">
               <span>{t("Gross", "মোট বিল")} <b className="tnum font-medium text-ink-soft">{taka(b.gross_amount)}</b></span>
               {ret > 0 && <span className="flex items-center gap-1"><ShieldHalf className="size-3.5" />{t("Retention held", "জামানত আটকে")} <b className="tnum font-medium text-ink-soft">{taka(retOut)}</b>{retOut < ret && <span>/ {taka(ret)}</span>}</span>}
-              {b.due_date && out > 0 && <span className={cn(late && "font-medium text-rose")}>{late ? t(`${-days!} days late`, `${n(-days!)} দিন দেরি`) : `${t("due", "শেষ তারিখ")} ${date(b.due_date)}`}</span>}
+              {b.due_date && out > 0 && <span className={cn(late && "font-medium text-rose")}>{late ? t(days === -1 ? "1 day late" : `${-days!} days late`, `${n(-days!)} দিন দেরি`) : `${t("due", "শেষ তারিখ")} ${date(b.due_date)}`}</span>}
             </div>
           </div>
 
           <div className="flex items-center gap-2 lg:justify-end">
-            {!voided && canFinance && (out > 0 || retOut > 0) && <Button size="sm" icon={<Banknote className="size-4" />} onClick={onPay}>{t("Pay", "পরিশোধ")}</Button>}
+            {!voided && canFinance && out > 0 && <Button size="sm" icon={<Banknote className="size-4" />} onClick={onPay}>{t("Pay", "পরিশোধ")}</Button>}
+            {!voided && canFinance && out === 0 && retOut > 0 && <Button size="sm" variant="outline" icon={<ShieldHalf className="size-4" />} onClick={onPay}>{t("Release retention", "জামানত ছাড়ুন")}</Button>}
             {!voided && canFinance && <Button size="sm" variant="ghost" onClick={onVoid} disabled={paid > 0 || num(b.retention_released) > 0} title={paid > 0 ? t("Void its payments first", "আগে পেমেন্টগুলো বাতিল করুন") : undefined}>{t("Void", "বাতিল")}</Button>}
           </div>
         </div>
@@ -177,9 +178,11 @@ function BillModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
   const { rows: packages } = useList<WorkPackage>(open && f.project ? `/work-packages?project=${f.project}` : null);
 
-  useEffect(() => {
-    if (open) { setF({ project: "", vendor: "", work_package: "", kind: "MATERIAL", bill_date: today(), due_date: "", reference: "", retention_amount: "", notes: "" }); setLines([emptyLine()]); setError(""); }
-  }, [open, setError]);
+  useOnOpen(open, () => {
+    setF({ project: "", vendor: "", work_package: "", kind: "MATERIAL", bill_date: today(), due_date: "", reference: "", retention_amount: "", notes: "" });
+    setLines([emptyLine()]);
+    setError("");
+  });
 
   const wp = packages.find((w) => String(w.id) === f.work_package);
   const gross = lines.reduce((a, l) => a + lineTotal(l), 0);
@@ -275,9 +278,10 @@ function PayModal({ bill, onClose }: { bill: VendorBill | null; onClose: () => v
   const { t, taka } = useT();
   const { busy, error, run, setError } = useAction();
   const [f, setF] = useState({ kind: "BILL", date: today(), amount: "", paid_from: "", reference: "", note: "" });
-  useEffect(() => {
-    if (bill) { setF({ kind: num(bill.outstanding) > 0 ? "BILL" : "RETENTION", date: today(), amount: "", paid_from: "", reference: "", note: "" }); setError(""); }
-  }, [bill, setError]);
+  useOnOpen(bill, (b) => {
+    setF({ kind: num(b.outstanding) > 0 ? "BILL" : "RETENTION", date: today(), amount: "", paid_from: "", reference: "", note: "" });
+    setError("");
+  });
 
   const owed = bill ? num(f.kind === "RETENTION" ? bill.retention_outstanding : bill.outstanding) : 0;
   const amount = num(f.amount);

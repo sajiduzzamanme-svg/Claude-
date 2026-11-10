@@ -2,7 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useId, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { useProjects } from "@/components/forms";
 import { Card, CountUp, cn, ease, rise } from "@/components/ui";
 import { useT } from "@/lib/i18n";
@@ -31,6 +31,17 @@ export function ProjectChips({ value, onChange, all }: { value: string; onChange
       })}
     </div>
   );
+}
+
+/** Run `reset` each time `key` changes to a new truthy value — e.g. a dialog opening for a record.
+ *  State is adjusted while rendering (React's "reset state when a prop changes" pattern), so the
+ *  dialog never paints one frame of the previous record's values. */
+export function useOnOpen<T>(key: T | null | undefined | false, reset: (key: T) => void) {
+  const [seen, setSeen] = useState<T | null | undefined | false>(null);
+  if (key !== seen) {
+    setSeen(key);
+    if (key) reset(key);
+  }
 }
 
 /** Animated open/close of a block of content. */

@@ -8,7 +8,7 @@ import { num, today } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import type { Account, BookingDetail, CostCategory, CostHead, Installment, Project, Receipt } from "@/lib/types";
 import { Logo } from "./shell";
-import { Badge, Button, ErrorNote, Field, Input, Modal, MoneyInput, Select, Textarea, cn, useAction, type Tone } from "./ui";
+import { Badge, Button, ErrorNote, Field, Input, Modal, MoneyInput, Select, Textarea, cn, useAction, useOnOpen, type Tone } from "./ui";
 
 /* ---------- shared lookups ---------- */
 export const useProjects = () => useList<Project>("/projects");
@@ -146,7 +146,7 @@ export function VoidModal({ open, onClose, title, hint, onConfirm }: { open: boo
   const { t } = useT();
   const [reason, setReason] = useState("");
   const { busy, error, run, setError } = useAction();
-  useEffect(() => { if (open) { setReason(""); setError(""); } }, [open, setError]);
+  useOnOpen(open, () => { setReason(""); setError(""); });
   return (
     <Modal open={open} onClose={onClose} size="sm" title={title}
       subtitle={hint ?? t("The original entry stays in the books; a reversing entry is added.", "মূল এন্ট্রি হিসাবে থেকে যাবে; একটি বিপরীত এন্ট্রি যোগ হবে।")}
@@ -170,15 +170,13 @@ export function ReceiveModal({ booking, installments, open, onClose, onDone }: {
 }) {
   const { t, taka } = useT();
   const { busy, error, run, setError } = useAction();
-  const [f, setF] = useState({ date: today(), amount: "", method: "BANK", deposit_account: "", reference: "", bank_name: "", note: "" });
+  const blank = () => ({ date: today(), amount: "", method: "BANK", deposit_account: "", reference: "", bank_name: "", note: "" });
+  const [f, setF] = useState(blank);
   const { rows: cash } = useCash();
-  useEffect(() => { if (open) { setF({ date: today(), amount: "", method: "BANK", deposit_account: "", reference: "", bank_name: "", note: "" }); setError(""); } }, [open, booking?.id, setError]);
-  // Suggest the account that matches how the money came in.
-  useEffect(() => {
-    const key = f.method === "CASH" ? "CASH" : f.method === "MOBILE" ? "MOBILE" : "BANK";
-    const acc = cash.find((a) => a.system_key === key);
-    if (acc) setF((s) => ({ ...s, deposit_account: String(acc.id) }));
-  }, [f.method, cash]);
+  useOnOpen(open, () => { setF(blank()); setError(""); }, booking?.id);
+  // Until the user picks an account, suggest the one that matches how the money came in.
+  const suggestedKey = f.method === "CASH" ? "CASH" : f.method === "MOBILE" ? "MOBILE" : "BANK";
+  const account = f.deposit_account || String(cash.find((a) => a.system_key === suggestedKey)?.id ?? cash[0]?.id ?? "");
 
   const next = installments?.find((i) => num(i.outstanding) > 0);
   const outstanding = num(booking?.outstanding);
@@ -193,7 +191,7 @@ export function ReceiveModal({ booking, installments, open, onClose, onDone }: {
   async function submit() {
     if (!booking) return;
     const res = await run(async () => {
-      const out = await api.post<BookingDetail>(`/bookings/${booking.id}/receive`, { ...f, deposit_account: Number(f.deposit_account) });
+      const out = await api.post<BookingDetail>(`/bookings/${booking.id}/receive`, { ...f, deposit_account: Number(account) });
       await refreshAll();
       return out;
     }, t("Payment received", "টাকা গৃহীত হয়েছে"));
@@ -208,7 +206,7 @@ export function ReceiveModal({ booking, installments, open, onClose, onDone }: {
       subtitle={booking && `${booking.customer_name} · ${booking.project_code} ${booking.flat_code} · ${booking.number}`}
       footer={<>
         <Button variant="ghost" onClick={onClose}>{t("Cancel", "বাতিল")}</Button>
-        <Button loading={busy} disabled={!amount || tooMuch || !f.deposit_account} onClick={submit}>{t("Save & issue receipt", "সেভ করে রিসিট দিন")}</Button>
+        <Button loading={busy} disabled={!amount || tooMuch || !account} onClick={submit}>{t("Save & issue receipt", "সেভ করে রিসিট দিন")}</Button>
       </>}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3 rounded-2xl bg-paper-deep/70 p-4 text-sm">
@@ -230,14 +228,14 @@ export function ReceiveModal({ booking, installments, open, onClose, onDone }: {
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("Date", "তারিখ")} required><Input type="date" value={f.date} max={today()} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
           <Field label={t("Received by", "মাধ্যম")}>
-            <Select value={f.method} onChange={(e) => setF({ ...f, method: e.target.value })}>
+            <Select value={f.method} onChange={(e) => setF({ ...f, method: e.target.value, deposit_account: "" })}>
               <option value="BANK">{t("Bank transfer / deposit", "ব্যাংক ট্রান্সফার / জমা")}</option>
               <option value="CHEQUE">{t("Cheque", "চেক")}</option>
               <option value="CASH">{t("Cash", "নগদ")}</option>
               <option value="MOBILE">{t("Mobile banking", "মোবাইল ব্যাংকিং")}</option>
             </Select>
           </Field>
-          <Field label={t("Deposited into", "যে হিসাবে জমা")} required><CashSelect value={f.deposit_account} onChange={(v) => setF((s) => ({ ...s, deposit_account: v }))} /></Field>
+          <Field label={t("Deposited into", "যে হিসাবে জমা")} required><CashSelect value={account} onChange={(v) => setF((s) => ({ ...s, deposit_account: v }))} /></Field>
           <Field label={f.method === "CHEQUE" ? t("Cheque number", "চেক নম্বর") : t("Reference / transaction ID", "রেফারেন্স / ট্রানজ্যাকশন আইডি")}><Input value={f.reference} onChange={(e) => setF({ ...f, reference: e.target.value })} /></Field>
           {(f.method === "CHEQUE" || f.method === "BANK") && <Field label={t("Bank name", "ব্যাংকের নাম")}><Input value={f.bank_name} onChange={(e) => setF({ ...f, bank_name: e.target.value })} /></Field>}
           <Field label={t("Note", "নোট")} className={f.method === "CHEQUE" || f.method === "BANK" ? "" : "sm:col-span-2"}><Input value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></Field>

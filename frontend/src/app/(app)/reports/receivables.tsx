@@ -89,7 +89,7 @@ export function ReceivablesReport() {
                           </Td>
                           <Td><span className="font-medium">{r.project} · {r.flat}</span><span className="tnum block text-xs text-mute">{r.number}</span></Td>
                           <Td right className={cn("font-semibold", num(r.overdue) > 0 ? "text-rose" : "text-mute")}>{num(r.overdue) > 0 ? taka(r.overdue) : "—"}</Td>
-                          <Td>{late > 0 ? <Badge tone={late > 60 ? "rose" : late > 30 ? "brick" : "brass"} dot>{t(`${late} days late`, `${n(late)} দিন দেরি`)}</Badge> : <Badge tone="leaf" dot>{t("On time", "সময়মতো")}</Badge>}{r.oldest_due && <span className="tnum mt-0.5 block text-xs text-mute">{date(r.oldest_due)}</span>}</Td>
+                          <Td>{late > 0 ? <Badge tone={late > 60 ? "rose" : late > 30 ? "brick" : "brass"} dot>{t(late === 1 ? "1 day late" : `${late} days late`, `${n(late)} দিন দেরি`)}</Badge> : <Badge tone="leaf" dot>{t("On time", "সময়মতো")}</Badge>}{r.oldest_due && <span className="tnum mt-0.5 block text-xs text-mute">{date(r.oldest_due)}</span>}</Td>
                           <Td right>{taka(r.not_due)}</Td>
                           <Td right className="font-bold">{taka(r.total)}</Td>
                         </motion.tr>

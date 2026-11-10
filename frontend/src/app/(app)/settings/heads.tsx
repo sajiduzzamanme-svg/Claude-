@@ -2,7 +2,8 @@
 
 import { Lock, Pencil, Plus } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useOnOpen } from "@/components/finance-parts";
 import { CATEGORIES } from "@/components/forms";
 import { Badge, Button, Card, ErrorNote, Field, Input, Modal, Select, Skeleton, cn, rise, stagger, useAction, useToast } from "@/components/ui";
 import { api, errorText, refreshAll, useList } from "@/lib/api";
@@ -64,7 +65,7 @@ export function CostHeads() {
                           <span title={t("Used by the system; cannot be changed", "সিস্টেম ব্যবহার করে; বদলানো যায় না")}><Lock className="size-3.5 text-brass" /></span>
                         ) : (
                           <>
-                            <button onClick={() => setEditing(h)} aria-label={t("Rename", "নাম বদলান")} className="grid size-7 place-items-center rounded-md text-mute opacity-0 transition hover:bg-paper-deep hover:text-ink group-hover:opacity-100 focus:opacity-100"><Pencil className="size-3.5" /></button>
+                            <button onClick={() => setEditing(h)} aria-label={t("Rename", "নাম বদলান")} className="grid size-7 place-items-center rounded-md text-mute opacity-40 transition hover:bg-paper-deep hover:text-ink group-hover:opacity-100 focus:opacity-100"><Pencil className="size-3.5" /></button>
                             <button role="switch" aria-checked={h.is_active} aria-label={t("Active", "সক্রিয়")} disabled={busyId === h.id} onClick={() => toggle(h)}
                               className={cn("relative h-5 w-9 shrink-0 rounded-full transition-colors", h.is_active ? "bg-leaf" : "bg-line")}>
                               <motion.span layout className={cn("absolute top-0.5 size-4 rounded-full bg-white shadow", h.is_active ? "right-0.5" : "left-0.5")} transition={{ type: "spring", stiffness: 500, damping: 30 }} />
@@ -91,11 +92,10 @@ function HeadModal({ target, onClose, existing }: { target: CostHead | "new" | n
   const { busy, error, run, setError } = useAction();
   const editing = target && target !== "new" ? target : null;
   const [f, setF] = useState({ code: "", name: "", name_bn: "", category: "CONSTRUCTION" });
-  useEffect(() => {
-    if (!target) return;
+  useOnOpen(target, (h) => {
     setError("");
-    setF(editing ? { code: editing.code, name: editing.name, name_bn: editing.name_bn, category: editing.category } : { code: "", name: "", name_bn: "", category: "CONSTRUCTION" });
-  }, [target, editing, setError]);
+    setF(h !== "new" ? { code: h.code, name: h.name, name_bn: h.name_bn, category: h.category } : { code: "", name: "", name_bn: "", category: "CONSTRUCTION" });
+  });
 
   // Suggest the next free code in the chosen category (C12 after C11, …).
   const prefix = { LAND: "L", DESIGN: "D", CONSTRUCTION: "C", MARKETING: "M", OVERHEAD: "O", CONTINGENCY: "X" }[f.category] ?? "";

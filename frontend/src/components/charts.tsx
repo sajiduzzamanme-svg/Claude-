@@ -9,7 +9,10 @@ export function useWidth<T extends HTMLElement>() {
   const [width, setWidth] = useState(0);
   useEffect(() => {
     if (!ref.current) return;
-    const ro = new ResizeObserver(([e]) => setWidth(Math.floor(e.contentRect.width)));
+    const ro = new ResizeObserver(([e]) => {
+      const w = Math.floor(e.contentRect.width);
+      if (w > 0) setWidth(w);
+    });
     ro.observe(ref.current);
     return () => ro.disconnect();
   }, []);
@@ -163,14 +166,13 @@ export function Waterfall({ steps, fmt, height = 250 }: { steps: Step[]; fmt: (n
   const pad = { t: 26, b: 40, l: 4, r: 4 };
   const w = Math.max(width, 240);
   const innerH = height - pad.t - pad.b;
-  let run = 0;
-  const bars = steps.map((s) => {
-    let from: number, to: number;
-    if (s.kind === "start" || s.kind === "total") { from = 0; to = s.value; run = s.value; }
-    else if (s.kind === "minus") { from = run; to = run - s.value; run = to; }
-    else { from = run; to = run + s.value; run = to; }
-    return { ...s, from, to };
-  });
+  const bars: (Step & { from: number; to: number })[] = [];
+  for (const s of steps) {
+    const prev = bars.length ? bars[bars.length - 1].to : 0;
+    if (s.kind === "start" || s.kind === "total") bars.push({ ...s, from: 0, to: s.value });
+    else if (s.kind === "minus") bars.push({ ...s, from: prev, to: prev - s.value });
+    else bars.push({ ...s, from: prev, to: prev + s.value });
+  }
   const hi = Math.max(...bars.map((b) => Math.max(b.from, b.to)), 1);
   const lo = Math.min(0, ...bars.map((b) => Math.min(b.from, b.to)));
   const y = (v: number) => pad.t + innerH - ((v - lo) / (hi - lo || 1)) * innerH;

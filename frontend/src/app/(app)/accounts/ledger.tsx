@@ -61,16 +61,16 @@ export function LedgerView({ account, onAccount }: { account: string; onAccount:
             </div>
             {data.rows.length === 0 ? <Empty title={t("No movement in this period", "এই সময়ে কোনো লেনদেন নেই")} /> : (
               <Table className="max-h-[640px] overflow-y-auto">
-                <thead><tr><Th>{t("Date", "তারিখ")}</Th><Th>{t("Voucher", "ভাউচার")}</Th><Th>{t("Particulars", "বিবরণ")}</Th><Th right>{t("Debit", "ডেবিট")}</Th><Th right>{t("Credit", "ক্রেডিট")}</Th><Th right>{t("Balance", "ব্যালেন্স")}</Th></tr></thead>
+                <thead><tr><Th>{t("Date", "তারিখ")}</Th><Th>{t("Voucher", "ভাউচার")}</Th><Th className="min-w-48">{t("Particulars", "বিবরণ")}</Th><Th right>{t("Debit", "ডেবিট")}</Th><Th right>{t("Credit", "ক্রেডিট")}</Th><Th right>{t("Balance", "ব্যালেন্স")}</Th></tr></thead>
                 <tbody>
                   {data.rows.map((r, i) => (
                     <motion.tr key={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(i, 30) * 0.012 }} className="transition hover:bg-paper-deep/50">
                       <Td className="tnum whitespace-nowrap text-mute">{date(r.date)}</Td>
                       <Td className="tnum whitespace-nowrap text-[13px] font-medium">{r.number}</Td>
-                      <Td><span className="block max-w-md truncate">{r.memo}</span><span className="text-xs text-mute">{[r.source_ref, r.project_code].filter(Boolean).join(" · ")}</span></Td>
-                      <Td right>{num(r.debit) > 0 ? taka(r.debit, 2) : ""}</Td>
-                      <Td right>{num(r.credit) > 0 ? taka(r.credit, 2) : ""}</Td>
-                      <Td right className={cn("font-semibold", num(r.balance) < 0 && "text-rose")}>{taka(r.balance, 2)}</Td>
+                      <Td className="w-full max-w-0"><span className="block truncate" title={r.memo}>{r.memo}</span><span className="block truncate text-xs text-mute">{[r.source_ref, r.project_code].filter(Boolean).join(" · ")}</span></Td>
+                      <Td right className="whitespace-nowrap">{num(r.debit) > 0 ? taka(r.debit, 2) : ""}</Td>
+                      <Td right className="whitespace-nowrap">{num(r.credit) > 0 ? taka(r.credit, 2) : ""}</Td>
+                      <Td right className={cn("whitespace-nowrap font-semibold", num(r.balance) < 0 && "text-rose")}>{taka(r.balance, 2)}</Td>
                     </motion.tr>
                   ))}
                 </tbody>

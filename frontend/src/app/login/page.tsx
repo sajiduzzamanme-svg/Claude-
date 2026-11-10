@@ -46,7 +46,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const towers = useMemo(skyline, []);
+  const towers = useMemo(() => skyline(), []);
   const demo = process.env.NEXT_PUBLIC_DEMO_LOGINS === "1";
 
   useEffect(() => {
