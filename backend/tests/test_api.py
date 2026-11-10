@@ -61,6 +61,14 @@ class ApiTests(SpaceUpTestCase):
         self.assertEqual(res.status_code, 200, res.content)
         self.assertEqual(res.data["status"], "VOIDED")
 
+    def test_urls_work_with_or_without_trailing_slash(self):
+        self.login("acc")
+        for url in ("/api/flats", "/api/flats/", "/api/dashboard", "/api/dashboard/", "/api/accounts/cash", "/api/reports/profit"):
+            self.assertEqual(self.api.get(url).status_code, 200, url)
+        booking = self.book("1A")
+        pay = {"date": str(TODAY), "amount": "1000", "deposit_account": self.bank.id}
+        self.assertEqual(self.api.post(f"/api/bookings/{booking.id}/receive", pay, format="json").status_code, 201)
+
     def test_roles_are_enforced(self):
         self.login("seller")
         self.assertEqual(self.api.get("/api/accounts/").status_code, 403)

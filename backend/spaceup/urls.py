@@ -2,7 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import include, path
+from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -14,7 +14,15 @@ from projects import views as projects
 from reports import views as reports
 from sales import views as sales
 
-router = DefaultRouter()
+class Router(DefaultRouter):
+    """Accept URLs with or without the trailing slash, so the app works behind any proxy."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.trailing_slash = "/?"
+
+
+router = Router()
 router.register("users", core.UserViewSet, basename="user")
 router.register("audit-log", core.AuditLogViewSet, basename="audit-log")
 router.register("accounts", accounts.AccountViewSet, basename="account")
@@ -46,18 +54,18 @@ def health(request):
 
 
 api = [
-    path("health/", health),
-    path("auth/login/", TokenObtainPairView.as_view()),
-    path("auth/refresh/", TokenRefreshView.as_view()),
-    path("auth/me/", core.me),
-    path("staff/", core.staff_directory),
-    path("dashboard/", reports.DashboardView.as_view()),
-    path("reports/receivables/", reports.ReceivablesView.as_view()),
-    path("reports/cashflow/", reports.CashflowView.as_view()),
-    path("reports/profit/", reports.ProfitView.as_view()),
-    path("reports/integrity/", reports.IntegrityView.as_view()),
-    path("reports/trial-balance/", accounts.TrialBalanceView.as_view()),
-    path("reports/ledger/", accounts.LedgerView.as_view()),
+    re_path(r"^health/?$", health),
+    re_path(r"^auth/login/?$", TokenObtainPairView.as_view()),
+    re_path(r"^auth/refresh/?$", TokenRefreshView.as_view()),
+    re_path(r"^auth/me/?$", core.me),
+    re_path(r"^staff/?$", core.staff_directory),
+    re_path(r"^dashboard/?$", reports.DashboardView.as_view()),
+    re_path(r"^reports/receivables/?$", reports.ReceivablesView.as_view()),
+    re_path(r"^reports/cashflow/?$", reports.CashflowView.as_view()),
+    re_path(r"^reports/profit/?$", reports.ProfitView.as_view()),
+    re_path(r"^reports/integrity/?$", reports.IntegrityView.as_view()),
+    re_path(r"^reports/trial-balance/?$", accounts.TrialBalanceView.as_view()),
+    re_path(r"^reports/ledger/?$", accounts.LedgerView.as_view()),
     path("", include(router.urls)),
 ]
 
